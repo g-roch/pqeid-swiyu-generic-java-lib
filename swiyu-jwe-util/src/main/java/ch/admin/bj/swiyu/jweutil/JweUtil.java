@@ -1,10 +1,10 @@
 package ch.admin.bj.swiyu.jweutil;
 
 import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.ECDHDecrypter;
-import com.nimbusds.jose.crypto.ECDHEncrypter;
+import com.nimbusds.jose.crypto.XWingDecrypter;
+import com.nimbusds.jose.crypto.XWingEncrypter;
 import com.nimbusds.jose.crypto.opts.MaxCompressedCipherTextLength;
-import com.nimbusds.jose.jwk.MLDSAKey;
+import com.nimbusds.jose.jwk.XWingKey;
 import com.nimbusds.jose.jwk.JWK;
 import lombok.experimental.UtilityClass;
 
@@ -32,15 +32,15 @@ public class JweUtil {
      */
     public static String encrypt(String payload, JWK recipientPublicKey) {
         try {
-            if (!(recipientPublicKey instanceof MLDSAKey mlKey)) {
-                throw new JweUtilException("Only ML-DSA keys are supported.");
+            if (!(recipientPublicKey instanceof XWingKey xwKey)) {
+                throw new JweUtilException("Only X-Wing keys are supported.");
             }
-            JWEHeader header = new JWEHeader.Builder(JWEAlgorithm.ECDH_ES, EncryptionMethod.A128GCM)
+            JWEHeader header = new JWEHeader.Builder(JWEAlgorithm.XWING, EncryptionMethod.A128GCM)
                     .compressionAlgorithm(CompressionAlgorithm.DEF)
-                    .keyID(mlKey.getKeyID())
+                    .keyID(xwKey.getKeyID())
                     .build();
             JWEObject jweObject = new JWEObject(header, new Payload(payload));
-            jweObject.encrypt(new ECDHEncrypter(mlKey));
+            jweObject.encrypt(new XWingEncrypter(xwKey));
             return jweObject.serialize();
         } catch (Exception e) {
             throw new JweUtilException("Error during JWE encryption", e);
@@ -74,14 +74,13 @@ public class JweUtil {
             jweDecrypterOptions.add(new MaxCompressedCipherTextLength(maxCompressedCipherTextLength));
         }
 
-        // PQEID: same category error as encrypt() above - see that comment. Also does not
-        // compile.
+        // PQEID: ECDH-ES -> XWING, see encrypt() above.
         try {
-            if (!(recipientPrivateKey instanceof MLDSAKey mlKey)) {
-                throw new JweUtilException("Only EC keys are supported.");
+            if (!(recipientPrivateKey instanceof XWingKey xwKey)) {
+                throw new JweUtilException("Only X-Wing keys are supported.");
             }
             JWEObject jweObject = JWEObject.parse(jweString);
-            jweObject.decrypt(new ECDHDecrypter(mlKey), jweDecrypterOptions);
+            jweObject.decrypt(new XWingDecrypter(xwKey), jweDecrypterOptions);
             return jweObject.getPayload().toString();
         } catch (Exception e) {
             throw new JweUtilException("Error during JWE decryption", e);
