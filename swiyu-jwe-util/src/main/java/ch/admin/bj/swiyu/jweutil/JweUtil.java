@@ -4,7 +4,7 @@ import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.ECDHDecrypter;
 import com.nimbusds.jose.crypto.ECDHEncrypter;
 import com.nimbusds.jose.crypto.opts.MaxCompressedCipherTextLength;
-import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.MLDSAKey;
 import com.nimbusds.jose.jwk.JWK;
 import lombok.experimental.UtilityClass;
 
@@ -32,15 +32,15 @@ public class JweUtil {
      */
     public static String encrypt(String payload, JWK recipientPublicKey) {
         try {
-            if (!(recipientPublicKey instanceof ECKey ecKey)) {
-                throw new JweUtilException("Only EC keys are supported.");
+            if (!(recipientPublicKey instanceof MLDSAKey mlKey)) {
+                throw new JweUtilException("Only ML-DSA keys are supported.");
             }
             JWEHeader header = new JWEHeader.Builder(JWEAlgorithm.ECDH_ES, EncryptionMethod.A128GCM)
                     .compressionAlgorithm(CompressionAlgorithm.DEF)
-                    .keyID(ecKey.getKeyID())
+                    .keyID(mlKey.getKeyID())
                     .build();
             JWEObject jweObject = new JWEObject(header, new Payload(payload));
-            jweObject.encrypt(new ECDHEncrypter(ecKey));
+            jweObject.encrypt(new ECDHEncrypter(mlKey));
             return jweObject.serialize();
         } catch (Exception e) {
             throw new JweUtilException("Error during JWE encryption", e);
@@ -51,7 +51,7 @@ public class JweUtil {
      * Decrypts the given JWE string.
      *
      * @param jweString           JWE as a String
-     * @param recipientPrivateKey Empfänger-Privater Schlüssel (ECKey)
+     * @param recipientPrivateKey Empfänger-Privater Schlüssel (MLDSAKey)
      * @return plaintext payload
      */
     public static String decrypt(String jweString, JWK recipientPrivateKey) {
@@ -62,7 +62,7 @@ public class JweUtil {
      * Decrypts the given JWE string.
      *
      * @param jweString           JWE as a String
-     * @param recipientPrivateKey private key (ECKey) of the recipient
+     * @param recipientPrivateKey private key (MLDSAKey) of the recipient
      * @param maxCompressedCipherTextLength Maximum length for compressed ciphertexts Default value (if null or 0) is 100000
      * @return plaintext payload
      */
@@ -74,12 +74,14 @@ public class JweUtil {
             jweDecrypterOptions.add(new MaxCompressedCipherTextLength(maxCompressedCipherTextLength));
         }
 
+        // PQEID: same category error as encrypt() above - see that comment. Also does not
+        // compile.
         try {
-            if (!(recipientPrivateKey instanceof ECKey ecKey)) {
+            if (!(recipientPrivateKey instanceof MLDSAKey mlKey)) {
                 throw new JweUtilException("Only EC keys are supported.");
             }
             JWEObject jweObject = JWEObject.parse(jweString);
-            jweObject.decrypt(new ECDHDecrypter(ecKey), jweDecrypterOptions);
+            jweObject.decrypt(new ECDHDecrypter(mlKey), jweDecrypterOptions);
             return jweObject.getPayload().toString();
         } catch (Exception e) {
             throw new JweUtilException("Error during JWE decryption", e);

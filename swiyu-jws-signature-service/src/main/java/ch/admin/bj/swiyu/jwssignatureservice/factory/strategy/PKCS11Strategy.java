@@ -3,7 +3,7 @@ package ch.admin.bj.swiyu.jwssignatureservice.factory.strategy;
 import ch.admin.bj.swiyu.jwssignatureservice.dto.SignatureConfigurationDto;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.MLDSAKey;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -39,11 +39,11 @@ public class PKCS11Strategy implements IKeyManagementStrategy {
             Security.addProvider(provider);
             var hsmKeyStore = KeyStore.getInstance("PKCS11", provider);
             hsmKeyStore.load(null, signatureConfigurationDto.getHsm().getUserPin().toCharArray());
-            var privateKey = ECKey.load(hsmKeyStore, signatureConfigurationDto.getHsm().getKeyId(), signatureConfigurationDto.getHsm().getUserPin().toCharArray());
+            var privateKey = MLDSAKey.load(hsmKeyStore, signatureConfigurationDto.getHsm().getKeyId(), signatureConfigurationDto.getHsm().getUserPin().toCharArray());
 
-            return fromEC(privateKey, provider);
+            return fromMLDSA(privateKey, provider);
         } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException | JOSEException e) {
-            throw new KeyStrategyException("Failed to load EC Key from PKCS11 JCE.", e);
+            throw new KeyStrategyException("Failed to load ML-DSA Key from PKCS11 JCE.", e);
         }
     }
 }

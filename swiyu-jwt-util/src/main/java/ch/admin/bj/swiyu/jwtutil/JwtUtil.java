@@ -1,8 +1,7 @@
 package ch.admin.bj.swiyu.jwtutil;
 
 import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.crypto.MLDSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyType;
@@ -18,7 +17,7 @@ import java.util.function.Function;
 /**
  * Utility class for working with JSON Web Tokens (JWT) in the Swiyu ecosystem.
  * <p>
- * Provides static methods for signing, building headers, and verifying JWTs using EC and RSA keys.
+ * Provides static methods for signing, building headers, and verifying JWTs using ML-DSA keys.
  * All errors are unified under {@link JwtUtilException} for consistent error handling.
  * </p>
  * <ul>
@@ -29,27 +28,25 @@ import java.util.function.Function;
  *   <li>{@link #buildVerifier(KeyType, JWK)}: Builds a JWSVerifier for the given key type and key.</li>
  * </ul>
  * <p>
- * Supported key types: EC (Elliptic Curve), RSA. Throws JwtUtilException for unsupported types or verification failures.
+ * Supported key types: AKP (ML-DSA). Throws JwtUtilException for unsupported types or verification failures.
  * </p>
  */
 @UtilityClass
 public final class JwtUtil {
 
+    // PQEID: ML-DSA keys don't get their own KeyType - MLDSAKey extends AKPJWK, so
+    // getKeyType() returns the generic KeyType.AKP ("Algorithm Key Pair") from the
+    // JOSE-PQC draft, not a per-algorithm type. MLDSAVerifier itself figures out the
+    // concrete ML-DSA parameter set (44/65/87) from the JWK's own "alg" field, so a single
+    // AKP -> MLDSAVerifier entry covers all of them.
     private static final Map<KeyType, Function<JWK, JWSVerifier>> VERIFIER_FACTORIES = new HashMap<>();
 
     static {
-        VERIFIER_FACTORIES.put(KeyType.EC, key -> {
+        VERIFIER_FACTORIES.put(KeyType.AKP, key -> {
             try {
-                return new ECDSAVerifier(key.toECKey().toPublicJWK());
+                return new MLDSAVerifier(key.toMLDSAKey().toPublicJWK());
             } catch (JOSEException e) {
-                throw new JwtUtilException("Failed to create EC verifier", e);
-            }
-        });
-        VERIFIER_FACTORIES.put(KeyType.RSA, key -> {
-            try {
-                return new RSASSAVerifier(key.toRSAKey().toPublicJWK());
-            } catch (JOSEException e) {
-                throw new JwtUtilException("Failed to create RSA verifier", e);
+                throw new JwtUtilException("Failed to create ML-DSA verifier", e);
             }
         });
     }

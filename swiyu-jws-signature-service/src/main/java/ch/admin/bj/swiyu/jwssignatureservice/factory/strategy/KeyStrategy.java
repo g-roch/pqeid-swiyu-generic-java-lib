@@ -7,8 +7,8 @@ import com.nimbusds.jose.jwk.JWK;
 import org.springframework.stereotype.Component;
 
 /**
- * Key management strategy for ECKey-based signing.
- * Parses a PEM-encoded EC private key and creates a signer.
+ * Key management strategy for MLDSAKey-based signing.
+ * Parses a PEM-encoded ML-DSA private key and creates a signer.
  */
 @Component("key")
 public class KeyStrategy implements IKeyManagementStrategy {
@@ -20,7 +20,7 @@ public class KeyStrategy implements IKeyManagementStrategy {
     }
 
     /**
-     * Creates a signer from a PEM-encoded EC private key.
+     * Creates a signer from a PEM-encoded ML-DSA private key.
      *
      * @param signatureConfigurationDto the signature configuration
      * @return a JWSSigner instance
@@ -29,9 +29,9 @@ public class KeyStrategy implements IKeyManagementStrategy {
     @Override
     public JWSSigner createSigner(SignatureConfigurationDto signatureConfigurationDto) throws KeyStrategyException {
         try {
-            return fromEC(JWK.parseFromPEMEncodedObjects(signatureConfigurationDto.getPrivateKey()).toECKey());
+            return fromMLDSA(JWK.parseFromPEMEncodedObjects(signatureConfigurationDto.getPrivateKey()).toMLDSAKey());
         } catch (JOSEException e) {
-            throw new KeyStrategyException("Failed to parse EC Key from PEM.", e);
+            throw new KeyStrategyException("Failed to parse ML-DSA Key from PEM.", e);
         }
     }
 }

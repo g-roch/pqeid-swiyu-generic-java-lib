@@ -19,7 +19,7 @@ public final class DpopConstants {
     /**
      * Supported algorithms for DPoP JWT signatures.
      */
-    public static final List<String> SUPPORTED_ALGORITHMS = List.of("ES256");
+    public static final List<String> SUPPORTED_ALGORITHMS = List.of("ML-DSA-44");
 
     /**
      * Mandatory header claims for DPoP JWTs.

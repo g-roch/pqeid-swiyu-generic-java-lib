@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  * Handles all mandatory JOSE header claims and standard JWT payload claims that are common
  * to every Trust Statement type:
  * <ul>
- *   <li>Header: {@code alg} (fixed {@code ES256}), {@code kid}, {@code profile_version}
+ *   <li>Header: {@code alg} (fixed {@code ML-DSA-44}), {@code kid}, {@code profile_version}
  *       (fixed {@code swiss-profile-trust:1.0.0}), {@code typ} (set by concrete subclass)</li>
  *   <li>Payload: {@code sub}, {@code iat}, {@code nbf}, {@code exp}</li>
  * </ul>
@@ -39,8 +39,14 @@ import java.util.regex.Pattern;
  */
 public abstract class AbstractTrustStatementBuilder<T extends AbstractTrustStatementBuilder<T>> {
 
+    // PQEID: migrated from ES256 to ML-DSA-44 (chosen for consistency with DpopConstants'
+    // DPoP algorithm choice, not because trust statements are ephemeral like DPoP proofs -
+    // ML-DSA-65/87 would give a higher security margin if that trade-off matters more here
+    // later). The header's "alg" claim is set here regardless of which JWSSigner the
+    // caller actually signs with, so the signer wiring (see swiyu-jws-signature-service)
+    // must actually produce ML-DSA signatures for this claim to be honest.
     private static final String PROFILE_VERSION = "swiss-profile-trust:1.0.0";
-    private static final JWSAlgorithm ALG = JWSAlgorithm.ES256;
+    private static final JWSAlgorithm ALG = JWSAlgorithm.ML_DSA_44;
     private static final String NOT_BEFORE = "notBefore";
     private static final String ISSUED_AT = "issuedAt";
     private static final String EXPIRES_AT = "expiresAt";

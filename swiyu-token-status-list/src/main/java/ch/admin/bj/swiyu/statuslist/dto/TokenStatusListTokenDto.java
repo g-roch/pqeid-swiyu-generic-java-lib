@@ -11,7 +11,7 @@ import lombok.Setter;
  * Example:
  * <p>
  * {
- *   "alg": "ES256",
+ *   "alg": "ML-DSA-44",
  *   "kid": "12",
  *   "typ": "statuslist+jwt"
  * }

@@ -12,7 +12,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.security.*;
 import java.security.cert.CertificateException;
-import java.security.interfaces.ECPrivateKey;
+import org.bouncycastle.jcajce.interfaces.MLDSAPrivateKey;
 
 /**
  * This strategy is used for the Securosys HSM. It requires the key to be created together with a self-signed certificate.
@@ -55,13 +55,23 @@ public class SecurosysStrategy implements IKeyManagementStrategy {
             var hsmKeyStore = KeyStore.getInstance("Primus");
             hsmKeyStore.load(bais, null);
 
-            // Loading the ECKey does not work for securosys provider, it does things different than expected by nimbus
-            var privateKey = (ECPrivateKey) hsmKeyStore.getKey(signatureConfigurationDto.getHsm().getKeyId(), signatureConfigurationDto.getHsm().getUserPin().toCharArray());
-            return fromEC(privateKey, provider);
+            // Loading the key directly (java.security.KeyStore.getKey) does not work for the
+            // securosys provider, it does things different than expected by nimbus.
+            // PQEID: cast target changed EC -> ML-DSA, but this cast to BouncyCastle's own
+            // org.bouncycastle.jcajce.interfaces.MLDSAPrivateKey is speculative and likely
+            // wrong at runtime against a real HSM: com.securosys.primus.jce.PrimusProvider
+            // is a Securosys-specific JCE provider, not BouncyCastle - untested whether it
+            // actually returns key objects implementing BC's interface for ML-DSA (the
+            // previous EC version worked because java.security.interfaces.ECPrivateKey is a
+            // standard JDK interface most providers implement; MLDSAPrivateKey here is BC's
+            // own type, a much narrower assumption). Expect a possible ClassCastException
+            // until verified against real Securosys hardware/firmware with PQC support.
+            var privateKey = (MLDSAPrivateKey) hsmKeyStore.getKey(signatureConfigurationDto.getHsm().getKeyId(), signatureConfigurationDto.getHsm().getUserPin().toCharArray());
+            return fromMLDSA(privateKey, provider);
         } catch (InstantiationException | ClassNotFoundException | KeyStoreException | IOException |
                  NoSuchAlgorithmException | CertificateException | UnrecoverableKeyException | JOSEException |
                  NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            throw new KeyStrategyException("Failed to load EC Key from securosys primus JCE.", e);
+            throw new KeyStrategyException("Failed to load ML-DSA Key from securosys primus JCE.", e);
         }
     }
 }
