@@ -161,6 +161,10 @@ public class TrustStatementVerifier {
         return statementIssuer.equals(trustRootDid);
     }
 
+    // PQEID: signature check for every Trust Statement type (idTS/piaTS/ncTls/piTls/
+    // pvaTs/vqPs) delegates to DidJwtValidator - same AKP/ML-DSA-only constraint as
+    // elsewhere (see JwtUtil.VERIFIER_FACTORIES), matching the ML-DSA-44-hardcoded builder
+    // side in AbstractTrustStatementBuilder.
     private boolean isValidStatement(Statement s, JWKSet publicKeySet) {
         try {
             new DidJwtValidator(urlRestriction).validateJwt(s.getSerializedJwt(), publicKeySet);

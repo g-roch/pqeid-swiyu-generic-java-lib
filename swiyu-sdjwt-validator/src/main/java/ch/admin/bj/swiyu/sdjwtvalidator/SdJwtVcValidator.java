@@ -79,6 +79,9 @@ public class SdJwtVcValidator {
     );
 
     
+    // PQEID: SD-JWT disclosure digest hash (SHA-256, symmetric, Grover-affected only,
+    // lower priority) - the actual signature check is delegated to DidJwtValidator, which
+    // in turn only supports AKP/ML-DSA (see JwtUtil.VERIFIER_FACTORIES).
     private static final String REQUIRED_HASH_ALGORITHM = "sha-256";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

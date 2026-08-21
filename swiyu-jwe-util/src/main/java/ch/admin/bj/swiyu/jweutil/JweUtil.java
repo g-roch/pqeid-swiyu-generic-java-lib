@@ -30,6 +30,12 @@ public class JweUtil {
      * @param payload The data to encrypt (as a String).
      * @return The encrypted JWE string, or null if not implemented.
      */
+    // PQEID: ECDH-ES -> XWING (post-quantum hybrid KEM, X25519+ML-KEM-768). ML-DSA
+    // (signature) could not replace ECDH-ES (key agreement) - see git history for that
+    // category error. The actual PQC replacement for a key-AGREEMENT scheme is a KEM;
+    // XWingKey/XWingEncrypter/XWingDecrypter were added to repos/nimbus-jose-jwt for
+    // this purpose (not a standardized JOSE algorithm - project-specific "XWING" alg,
+    // see JWEAlgorithm.XWING javadoc).
     public static String encrypt(String payload, JWK recipientPublicKey) {
         try {
             if (!(recipientPublicKey instanceof XWingKey xwKey)) {

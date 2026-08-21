@@ -261,6 +261,13 @@ public class DidJwtValidator {
      * @param jwk the source JWK
      * @return map of JWK fields
      */
+    // PQEID: this conversion is genuinely key-type agnostic (EC, OKP/Ed25519, RSA, AKP/
+    // ML-DSA - whatever the DID Document publishes), but the actual signature check below
+    // (verifySignature -> JwtUtil.verifyJwt) only has an AKP/ML-DSA verifier registered
+    // (see JwtUtil.VERIFIER_FACTORIES) - an EC/OKP/RSA key resolved here would fail
+    // verification with "Unsupported Key Type ...". Registering more verifiers in
+    // JwtUtil's VERIFIER_FACTORIES map would make them usable here for free, with no
+    // change needed in this class.
     private Map<String, Object> buildJwkMap(Jwk jwk) {
         return OBJECT_MAPPER.convertValue(jwk, new TypeReference<>() {
         });

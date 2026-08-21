@@ -25,6 +25,7 @@ public final class DpopHashUtil {
      * @return the base64url-encoded SHA-256 hash
      * @throws IllegalStateException if the SHA-256 algorithm is not available
      */
+    // TODO: TODO-PQEID: SHA-256
     public static String sha256(@NonNull String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
