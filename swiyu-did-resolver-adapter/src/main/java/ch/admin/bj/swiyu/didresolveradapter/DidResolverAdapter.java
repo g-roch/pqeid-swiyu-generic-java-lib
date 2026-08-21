@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.text.ParseException;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -166,7 +167,24 @@ public class DidResolverAdapter {
      * @throws ParseException if the JWK string cannot be parsed
      */
     private JWK didResolverJwkToNimbusJwk(Jwk resolverJwk) throws JsonProcessingException, ParseException {
-        var jwkString = objectMapper.writeValueAsString(resolverJwk);
+        // PQEID: explicit field mapping instead of objectMapper.writeValueAsString(resolverJwk) -
+        // the did_sidekicks.Jwk UniFFI/Kotlin data class's "pub" member (ML-DSA/AKP public key
+        // material) is exposed to Java as getPubKey() (Kotlin camelCase), which Jackson's default
+        // bean serialization would emit as "pubKey", not the "pub" JWK member name that
+        // JWK.parse()/MLDSAKey.parse() require. The other members happen to already match the JWK
+        // spec's own names (alg, kid, kty, crv, x, y), which is why this worked via plain
+        // serialization before.
+        var jwkMap = new HashMap<String, Object>();
+        jwkMap.put("alg", resolverJwk.getAlg());
+        jwkMap.put("kid", resolverJwk.getKid());
+        jwkMap.put("kty", resolverJwk.getKty());
+        jwkMap.put("crv", resolverJwk.getCrv());
+        jwkMap.put("x", resolverJwk.getX());
+        jwkMap.put("y", resolverJwk.getY());
+        jwkMap.put("pub", resolverJwk.getPubKey());
+        jwkMap.values().removeIf(java.util.Objects::isNull);
+
+        var jwkString = objectMapper.writeValueAsString(jwkMap);
         return JWK.parse(jwkString);
     }
 
