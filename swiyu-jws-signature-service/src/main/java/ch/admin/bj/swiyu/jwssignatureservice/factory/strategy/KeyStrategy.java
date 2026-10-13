@@ -4,6 +4,7 @@ import ch.admin.bj.swiyu.jwssignatureservice.dto.SignatureConfigurationDto;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.CompositeMLDSAKey;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,9 +30,14 @@ public class KeyStrategy implements IKeyManagementStrategy {
     @Override
     public JWSSigner createSigner(SignatureConfigurationDto signatureConfigurationDto) throws KeyStrategyException {
         try {
-            return fromMLDSA(JWK.parseFromPEMEncodedObjects(signatureConfigurationDto.getPrivateKey()).toMLDSAKey());
-        } catch (JOSEException e) {
-            throw new KeyStrategyException("Failed to parse ML-DSA Key from PEM.", e);
+            JWK jwk = JWK.parseFromPEMEncodedObjects(signatureConfigurationDto.getPrivateKey());
+            if (jwk instanceof CompositeMLDSAKey composite) {
+                return fromComposite(composite);   // PQEID: hybrid ML-DSA-65-ES256
+            }
+            return fromMLDSA(jwk.toMLDSAKey());
+        } catch (JOSEException | RuntimeException e) {
+            throw new KeyStrategyException(
+                    "Failed to parse signing key (ML-DSA or composite) from PEM.", e);
         }
     }
 }

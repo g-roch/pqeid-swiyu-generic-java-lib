@@ -1,5 +1,10 @@
 package ch.admin.bj.swiyu.dpop;
 
+import  com.nimbusds.jose.JWSAlgorithm;
+
+import java.util.stream.Collectors;
+
+import java.util.Set;
 import java.util.List;
 
 /**
@@ -19,7 +24,12 @@ public final class DpopConstants {
     /**
      * Supported algorithms for DPoP JWT signatures.
      */
-    public static final List<String> SUPPORTED_ALGORITHMS = List.of("ML-DSA-44");
+    public static final List<String> SUPPORTED_ALGORITHMS = List.of("ML-DSA-44", "ML-DSA-65-ES256");
+
+
+     /** The same policy, as nimbus algorithms (used by DpopJwtValidator.validateSignature). */
+    public static final Set<JWSAlgorithm> SUPPORTED_JWS_ALGORITHMS = SUPPORTED_ALGORITHMS.stream()
+            .map(JWSAlgorithm::parse).collect(Collectors.toUnmodifiableSet());
 
     /**
      * Mandatory header claims for DPoP JWTs.

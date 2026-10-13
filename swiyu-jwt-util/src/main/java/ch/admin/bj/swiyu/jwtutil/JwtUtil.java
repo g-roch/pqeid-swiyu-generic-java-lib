@@ -1,7 +1,6 @@
 package ch.admin.bj.swiyu.jwtutil;
 
 import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.MLDSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyType;
@@ -10,9 +9,8 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.experimental.UtilityClass;
 
 import java.text.ParseException;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Set;
 
 /**
  * Utility class for working with JSON Web Tokens (JWT) in the Swiyu ecosystem.
@@ -28,28 +26,12 @@ import java.util.function.Function;
  *   <li>{@link #buildVerifier(KeyType, JWK)}: Builds a JWSVerifier for the given key type and key.</li>
  * </ul>
  * <p>
- * Supported key types: AKP (ML-DSA). Throws JwtUtilException for unsupported types or verification failures.
+ * Supported key types: AKP (ML-DSA and composite ML-DSA-65-ES256, gated by an algorithm policy). 
+ * Throws JwtUtilException for unsupported types or verification failures.
  * </p>
  */
 @UtilityClass
 public final class JwtUtil {
-
-    // PQEID: ML-DSA keys don't get their own KeyType - MLDSAKey extends AKPJWK, so
-    // getKeyType() returns the generic KeyType.AKP ("Algorithm Key Pair") from the
-    // JOSE-PQC draft, not a per-algorithm type. MLDSAVerifier itself figures out the
-    // concrete ML-DSA parameter set (44/65/87) from the JWK's own "alg" field, so a single
-    // AKP -> MLDSAVerifier entry covers all of them.
-    private static final Map<KeyType, Function<JWK, JWSVerifier>> VERIFIER_FACTORIES = new HashMap<>();
-
-    static {
-        VERIFIER_FACTORIES.put(KeyType.AKP, key -> {
-            try {
-                return new MLDSAVerifier(key.toMLDSAKey().toPublicJWK());
-            } catch (JOSEException e) {
-                throw new JwtUtilException("Failed to create ML-DSA verifier", e);
-            }
-        });
-    }
 
     /**
      * Signs a JWT with the provided claims, header, and signer.
@@ -96,9 +78,14 @@ public final class JwtUtil {
      */
     public static Map<String, Object> verifyJwt(String jwtString, JWKSet keySet)
             throws JwtUtilException {
+        return verifyJwt(jwtString, keySet, SignatureVerifiers.MIGRATION_DEFAULT);
+    }
+
+     /** PQEID: verifies only algorithms in {@code accepted} (policy). */
+    public static Map<String, Object> verifyJwt(String jwtString, JWKSet keySet,
+                                                Set<JWSAlgorithm> accepted) throws JwtUtilException {
         try {
-            SignedJWT jwt = SignedJWT.parse(jwtString);
-            return verifySignedJwt(jwt, keySet);
+            return verifySignedJwt(SignedJWT.parse(jwtString), keySet, accepted);
         } catch (ParseException e) {
             throw new JwtUtilException("Failed to parse JWT", e);
         }
@@ -114,13 +101,19 @@ public final class JwtUtil {
      */
     public static Map<String, Object> verifySignedJwt(SignedJWT jwt, JWKSet keySet)
             throws JwtUtilException {
+         return verifySignedJwt(jwt, keySet, SignatureVerifiers.MIGRATION_DEFAULT);
+    }
+
+    /** PQEID: verifies only algorithms in {@code accepted} (policy). */
+    public static Map<String, Object> verifySignedJwt(SignedJWT jwt, JWKSet keySet,
+                                                      Set<JWSAlgorithm> accepted) throws JwtUtilException {
         try {
             JWSHeader header = jwt.getHeader();
             JWK key = keySet.getKeyByKeyId(header.getKeyID());
             if (key == null) {
                 throw new JwtUtilException("No matching key found");
             }
-            JWSVerifier verifier = buildVerifier(key.getKeyType(), key);
+            JWSVerifier verifier = SignatureVerifiers.forKey(key, header.getAlgorithm(), accepted);
             if (!jwt.verify(verifier)) {
                 throw new JwtUtilException("JWT signature verification failed");
             }
@@ -131,19 +124,14 @@ public final class JwtUtil {
     }
 
     /**
-     * Builds a JWSVerifier for the given key type and key.
-     *
-     * @param kty Key type (EC or RSA).
-     * @param key JWK instance.
-     * @return JWSVerifier for signature verification.
-     * @throws JwtUtilException if the key type is unsupported or verifier creation fails.
+     * @deprecated PQEID: has no header alg, so the policy can only use the key's own alg.
+     * Use {@link SignatureVerifiers#forKey} with the JWS header's alg instead.
      */
+    @Deprecated
     public static JWSVerifier buildVerifier(KeyType kty, JWK key) throws JwtUtilException {
-        Function<JWK, JWSVerifier> factory = VERIFIER_FACTORIES.get(kty);
-        if (factory == null) {
+        if (!KeyType.AKP.equals(kty) || !(key.getAlgorithm() instanceof JWSAlgorithm alg)) {
             throw new JwtUtilException("Unsupported Key Type " + kty);
         }
-        return factory.apply(key);
+        return SignatureVerifiers.forKey(key, alg, SignatureVerifiers.MIGRATION_DEFAULT);
     }
-
 }

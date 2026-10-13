@@ -1,11 +1,14 @@
 package ch.admin.bj.swiyu.dpop;
 
+import ch.admin.bj.swiyu.jwtutil.SignatureVerifiers;
+import ch.admin.bj.swiyu.jwtutil.JwtUtilException;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.MLDSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jose.JWSVerifier;
 import lombok.experimental.UtilityClass;
 
 import java.net.URI;
@@ -87,7 +90,14 @@ public final class DpopJwtValidator {
      * @throws DpopValidationException if the signature is invalid
      */
     public static void validateSignature(SignedJWT dpopJwt, JWK key) throws JOSEException {
-        if (!dpopJwt.verify(new MLDSAVerifier(key.toMLDSAKey()))) {
+        JWSVerifier verifier;
+        try {
+            verifier = SignatureVerifiers.forKey(key, dpopJwt.getHeader().getAlgorithm(),
+                    DpopConstants.SUPPORTED_JWS_ALGORITHMS);
+        } catch (JwtUtilException e) {
+            throw new DpopValidationException("DPoP key/algorithm not acceptable: " + e.getMessage());
+        }
+        if (!dpopJwt.verify(verifier)) {
             throw new DpopValidationException("DPoP signature is invalid");
         }
     }

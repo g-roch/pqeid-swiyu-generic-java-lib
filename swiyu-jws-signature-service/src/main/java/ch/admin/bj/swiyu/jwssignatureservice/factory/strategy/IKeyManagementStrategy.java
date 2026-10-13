@@ -6,6 +6,8 @@ import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.MLDSASigner;
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.jwk.MLDSAKey;
+import com.nimbusds.jose.crypto.CompositeSigner;
+import com.nimbusds.jose.jwk.CompositeMLDSAKey;
 
 import java.security.Provider;
 import org.bouncycastle.jcajce.interfaces.MLDSAPrivateKey;
@@ -37,6 +39,26 @@ public interface IKeyManagementStrategy {
         var signer = new MLDSASigner(privateKey);
         signer.getJCAContext().setProvider(provider);
         return signer;
+    }
+
+    /**
+     * PQEID: creates a signer from a composite (PQ/T hybrid) key, e.g. ML-DSA-65-ES256.
+     *
+     * @param privateKey composite key including the private part
+     * @param provider   JCA provider implementing the LAMPS composites
+     * @return a newly created Signing Support
+     * @throws JOSEException if the Signer could not be created with the provided key
+     */
+    default JWSSigner fromComposite(CompositeMLDSAKey privateKey, Provider provider)
+            throws JOSEException {
+        var signer = new CompositeSigner(privateKey);
+        signer.getJCAContext().setProvider(provider);
+        return signer;
+    }
+
+    /** PQEID: as {@link #fromComposite(CompositeMLDSAKey, Provider)}, with BouncyCastle. */
+    default JWSSigner fromComposite(CompositeMLDSAKey privateKey) throws JOSEException {
+        return fromComposite(privateKey, BouncyCastleProviderSingleton.getInstance());
     }
 
     /**

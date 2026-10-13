@@ -41,7 +41,7 @@ public class JweUtil {
             if (!(recipientPublicKey instanceof XWingKey xwKey)) {
                 throw new JweUtilException("Only X-Wing keys are supported.");
             }
-            JWEHeader header = new JWEHeader.Builder(JWEAlgorithm.XWING, EncryptionMethod.A128GCM)
+            JWEHeader header = new JWEHeader.Builder(JWEAlgorithm.XWING, EncryptionMethod.A256GCM) // PQEID: A256GCM (CD-002)
                     .compressionAlgorithm(CompressionAlgorithm.DEF)
                     .keyID(xwKey.getKeyID())
                     .build();
